@@ -4,11 +4,13 @@ local lp = players.LocalPlayer
 
 --[[ 
     НАСТРОЙКА СУЩНОСТЕЙ
-    weight = шанс выпадения. (Больше = чаще).
+    weight = шанс выпадения (Больше = чаще).
 ]]
 local entityList = {
     { name = "Ripper", url = "https://raw.githubusercontent.com/sigmacool617-arch/Doors-Worst-Nightmare-Mode/refs/heads/main/Entitys/Ripper.lua", weight = 20 },
-    { name = "Rebound", url = "https://raw.githubusercontent.com/sigmacool617-arch/Doors-Worst-Nightmare-Mode/refs/heads/main/Entitys/Rebound.lua", weight = 3 }, -- Пример: Раш будет выпадать чаще
+    { name = "Rebound", url = "https://raw.githubusercontent.com/sigmacool617-arch/Doors-Worst-Nightmare-Mode/refs/heads/main/Entitys/Rebound.lua", weight = 3 },
+    { name = "Radiation", url = "https://raw.githubusercontent.com/sigmacool617-arch/Doors-Worst-Nightmare-Mode/refs/heads/main/Entitys/Radiation.lua", weight = 10 },
+    { name = "Mimic", url = "https://raw.githubusercontent.com/sigmacool617-arch/Doors-Worst-Nightmare-Mode/refs/heads/main/Entitys/Mimic.lua", weight = 25 },
 }
 
 local isRunning = true
@@ -65,7 +67,7 @@ local function spawnRandomEntity(reason)
                 end
             end
         end)
-        if not success then warn("[Мод] Ошибка: " .. tostring(err)) end
+        if not success then warn("[Мод] Ошибка загрузки сущности: " .. tostring(err)) end
     end)
 end
 
@@ -79,7 +81,6 @@ task.spawn(function()
             local currentRoom = replicatedStorage.GameData.LatestRoom.Value
             
             -- Если комната >= 90, монстры спавнятся чаще (каждые 1.5 - 3 минуты)
-            -- Иначе - каждые 3 - 6 минут
             if currentRoom >= 90 then
                 nextTimeSpawn = tick() + math.random(90, 180) 
             else
@@ -93,20 +94,16 @@ end)
 replicatedStorage.GameData.LatestRoom.Changed:Connect(function(newRoom)
     task.wait(1.5) -- Ждем, пока игрок зайдет
     
-    -- Считаем шанс спавна в комнате
     local spawnChance = 10 -- Базовый шанс 10%
     
     if newRoom >= 90 then
-        spawnChance = 50 -- После 90 комнаты шанс 50% (как в оригинале)
+        spawnChance = 50 -- После 90 комнаты шанс 50%
     elseif newRoom > 50 then
         spawnChance = 25 -- С 50 по 89 комнату - 25%
     end
     
-    -- Бросаем кубик
     if math.random(1, 100) <= spawnChance then
         spawnRandomEntity("Комната " .. newRoom .. " (Шанс " .. spawnChance .. "%)")
-        
-        -- Сбрасываем таймер, так как только что заспавнили
         nextTimeSpawn = tick() + math.random(180, 360)
     end
 end)
@@ -117,4 +114,50 @@ lp.CharacterAdded:Connect(function()
     activeMonsters = {}
 end)
 
-print("[Мод] Динамическая сложность активирована.")
+-- ==========================================
+-- 3. ГЛОБАЛЬНЫЕ АНОМАЛИИ (Атмосфера)
+-- ==========================================
+task.spawn(function()
+    while isRunning do
+        task.wait(math.random(60, 150)) -- Раз в 1-2.5 минуты
+        
+        local currentRoom = replicatedStorage.GameData.LatestRoom.Value
+        if currentRoom > 5 then -- Начинаем пугать только после 5 комнат
+            local scareType = math.random(1, 3)
+            
+            if scareType == 1 then
+                -- Фантомные шаги за спиной
+                local s = Instance.new("Sound")
+                s.SoundId = "rbxassetid://9113731836" 
+                s.Volume = 2
+                s.Parent = workspace
+                s:Play()
+                game.Debris:AddItem(s, 5)
+                print("[Аномалия] Шаги...")
+                
+            elseif scareType == 2 then
+                -- Резкое выключение света на 1.5 секунды
+                local cc = game.Lighting:FindFirstChild("MainColorCorrection")
+                if cc then
+                    local oldColor = cc.TintColor
+                    cc.TintColor = Color3.fromRGB(0, 0, 0)
+                    task.wait(1.5)
+                    cc.TintColor = oldColor
+                    print("[Аномалия] Свет моргнул...")
+                end
+                
+            elseif scareType == 3 then
+                -- Шепот
+                local whisper = Instance.new("Sound")
+                whisper.SoundId = "rbxassetid://4835664238" 
+                whisper.Volume = 2
+                whisper.Parent = workspace
+                whisper:Play()
+                game.Debris:AddItem(whisper, 4)
+                print("[Аномалия] Шепот...")
+            end
+        end
+    end
+end)
+
+print("[Мод] Doors: Worst Nightmare Mode успешно загружен!")
