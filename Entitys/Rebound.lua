@@ -21,16 +21,16 @@ local Rebound = spawner.Create({
         Values = {5, 30, 0.1, 1.2}, -- Сила тряски камеры
     },
     Movement = {
-        Speed = 120, -- Скорость Раша
+        Speed = 180, -- Скорость Раша
         Delay = 3, -- Он начнет бежать через 3 секунды
         Reversed = false, 
     },
     Rebounding = {
         Enabled = true,
         Type = "Ambush", -- Может отскочить назад, как Амбаш
-        Min = 5,
-        Max = 10,
-        Delay = 3,
+        Min = 3,
+        Max = 7,
+        Delay = 1.5,
     },
     Damage = {
         Enabled = true,
