@@ -3,76 +3,117 @@ local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local LP = Players.LocalPlayer
 
--- Находим комнату
-local roomNum = game.ReplicatedStorage.GameData.LatestRoom.Value
-local currentRoom = workspace.CurrentRooms:FindFirstChild(tostring(roomNum))
-if not currentRoom then return end
+-- Загружаем движок
+local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 
--- Ищем шкаф (в Doors они обычно называются Wardrobe или Closet)
-local closet = currentRoom:FindFirstChild("Wardrobe", true) or currentRoom:FindFirstChild("Closet", true)
+-- Создаем сущность (модель скрыта, урон наносим вручную)
+local Mimic = spawner.Create({
+    Entity = {
+        Name = "Mimic", 
+        Asset = "rbxassetid://11851409651", -- Модель не важна, мы её удалим
+        HeightOffset = 0, 
+    },
+    Lights = { Flicker = { Enabled = false }, Shatter = false, Repair = false },
+    Earthquake = { Enabled = false },
+    CameraShake = { Enabled = false },
+    Movement = { Speed = 0, Delay = 999 }, 
+    Rebounding = { Enabled = false },
+    Damage = { Enabled = false }, 
+    Crucifixion = { Enabled = false },
+    Death = {
+        Type = "Curious", 
+        Hints = {
+            "You died to Mimic...", 
+            "It was hiding in the wardrobe.", 
+            "Did you notice the red glow?", 
+            "Never trust a closet that looks crooked."
+        },
+        Cause = "Mimic"
+    }
+})
 
-if not closet then
-    print("[Mimic] В комнате нет шкафа, мимик отменяется.")
-    return
-end
+Mimic:SetCallback("OnSpawned", function()
+    print("[Mimic] Спавн начался. Ищем шкаф...")
+    task.wait(0.2)
 
-print("[Mimic] Шкаф заражен...")
+    local roomNum = game.ReplicatedStorage.GameData.LatestRoom.Value
+    local currentRoom = workspace.CurrentRooms:FindFirstChild(tostring(roomNum))
+    
+    if not currentRoom then return end
 
--- 1. Делаем шкаф "неровным" (наклоняем на пару градусов)
-if closet:FindFirstChildWhichIsA("BasePart") then
-    local mainPart = closet:FindFirstChildWhichIsA("BasePart")
-    -- Наклоняем на 5 градусов в случайную сторону
-    mainPart.CFrame = mainPart.CFrame * CFrame.Angles(math.rad(5), math.rad(0), math.rad(math.random(-5, 5)))
-end
+    -- 1. Удаляем модель движка из комнаты, она нам не нужна
+    local dummyModel = currentRoom:FindFirstChild("Mimic") or workspace:FindFirstChild("Mimic")
+    if dummyModel then dummyModel:Destroy() end
 
--- 2. Добавляем красный свет внутри шкафа
-local redLight = Instance.new("PointLight")
-redLight.Color = Color3.fromRGB(255, 0, 0)
-redLight.Brightness = 2
-redLight.Range = 5
-redLight.Parent = closet:FindFirstChildWhichIsA("BasePart") or closet
+    -- 2. Ищем шкаф (Wardrobe или Closet) во всей комнате
+    local closet = currentRoom:FindFirstChild("Wardrobe", true) 
+                or currentRoom:FindFirstChild("Closet", true)
+                or currentRoom:FindFirstChild("Wardrobe", true)
 
--- 3. Следим за игроком
-local isDead = false
-local checkConn
+    if not closet then
+        print("[Mimic] В комнате нет шкафа. Мимик отменяется.")
+        return
+    end
 
-checkConn = task.spawn(function()
-    while not isDead do
-        task.wait(0.2)
-        
-        local char = LP.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        
-        if not hum or hum.Health <= 0 then
-            isDead = true
-            break
-        end
-        
-        -- Проверяем, не сидит ли игрок в этом шкафу
-        -- В Doors при посадке в шкаф создается объект или меняется позиция
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            local dist = (char.HumanoidRootPart.Position - (closet:FindFirstChildWhichIsA("BasePart") and closet:FindFirstChildWhichIsA("BasePart").Position or Vector3.new())).Magnitude
+    print("[Mimic] Шкаф заражен!")
+
+    -- 3. Делаем шкаф "неровным" (наклоняем)
+    local closetPart = closet:FindFirstChildWhichIsA("BasePart")
+    if closetPart then
+        -- Наклоняем вперед и в бок
+        closetPart.CFrame = closetPart.CFrame * CFrame.Angles(math.rad(3), 0, math.rad(4))
+    end
+
+    -- 4. Добавляем красный свет изнутри
+    local redLight = Instance.new("PointLight")
+    redLight.Color = Color3.fromRGB(255, 0, 0)
+    redLight.Brightness = 3
+    redLight.Range = 6
+    redLight.Parent = closetPart or closet
+
+    -- 5. Слежка за игроком (Проверка на посадку в шкаф)
+    local isDead = false
+    local startTime = tick()
+
+    task.spawn(function()
+        while not isDead and (tick() - startTime < 20) do
+            task.wait(0.1)
             
-            if dist < 4 then -- Если игрок очень близко (сел в шкаф)
-                print("[Mimic] Игрок залез в шкаф. Убиваем!")
+            local char = LP.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            
+            if not hum or hum.Health <= 0 then
                 isDead = true
+                break
+            end
+
+            -- Проверяем, сидит ли игрок внутри шкафа (расстояние меньше 4 стадов)
+            if closetPart and hrp then
+                local dist = (hrp.Position - closetPart.Position).Magnitude
                 
-                -- Эффект
-                if Lighting:FindFirstChild("MainColorCorrection") then
-                    TweenService:Create(Lighting.MainColorCorrection, TweenInfo.new(0.5), {
-                        TintColor = Color3.fromRGB(255, 0, 0),
-                        Contrast = 1
-                    }):Play()
+                if dist < 4.5 then
+                    print("[Mimic] Игрок залез в шкаф!")
+                    isDead = true
+                    
+                    -- Красный экран
+                    local cc = Lighting:FindFirstChild("MainColorCorrection")
+                    if cc then
+                        TweenService:Create(cc, TweenInfo.new(0.2), {
+                            TintColor = Color3.fromRGB(255, 0, 0),
+                            Contrast = 1
+                        }):Play()
+                    end
+                    
+                    -- Убиваем
+                    hum.Health = 0
                 end
-                
-                hum.Health = 0 -- Убиваем
             end
         end
-    end
+        
+        -- Убираем свет через 20 сек, если никто не умер
+        if redLight then redLight:Destroy() end
+    end)
 end)
 
--- Если игрок не залез за 15 секунд, убираем свечение
-task.delay(15, function()
-    if redLight then redLight:Destroy() end
-    isDead = true
-end)
+Mimic:Run()
