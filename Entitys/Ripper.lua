@@ -1,7 +1,6 @@
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
 
--- Загружаем движок
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 
 local Ripper = spawner.Create({
@@ -47,7 +46,7 @@ local Ripper = spawner.Create({
     Death = {
         Type = "Curious",
         Hints = {
-            "You died to...", 
+            "You died to Ripper...", 
             "She said this entity named Ripper, okay.", 
             "Oh, she also said what you need to do.", 
             "Hm, I won't say, just return and try again."
@@ -57,23 +56,43 @@ local Ripper = spawner.Create({
 })
 
 Ripper:SetCallback("OnSpawned", function()
-    print("[Ripper] Модель появилась. Ждем 8 секунд до старта...")
+    print("[Ripper] Модель заспавнилась. Ищем PrimaryPart...")
     
+    -- Ищем модель в Workspace, чтобы принудительно назначить ей PrimaryPart
+    task.wait(0.5)
     local roomNum = game.ReplicatedStorage.GameData.LatestRoom.Value
     local currentRoom = workspace.CurrentRooms:FindFirstChild(tostring(roomNum))
     
     if currentRoom then
-        -- Ломаем лампы
-        for _, obj in pairs(currentRoom:GetDescendants()) do
-            if obj:IsA("Light") then
-                obj.Enabled = false
-                if obj.Parent.Name == "LightFixture" then
-                    obj.Parent.Transparency = 0.8
+        local model = currentRoom:FindFirstChild("Ripper") or workspace:FindFirstChild("Ripper")
+        if model then
+            -- Если у модели нет PrimaryPart, назначаем ей первую попавшуюся деталь
+            if not model.PrimaryPart then
+                local firstPart = model:FindFirstChildWhichIsA("BasePart")
+                if firstPart then
+                    model.PrimaryPart = firstPart
+                    print("[Ripper] PrimaryPart назначен: " .. firstPart.Name)
+                else
+                    warn("[Ripper] В модели вообще НЕТ деталей (BasePart)!")
                 end
+            else
+                print("[Ripper] PrimaryPart уже есть: " .. model.PrimaryPart.Name)
+            end
+            
+            -- Проверяем, есть ли Humanoid (движку он нужен для движения)
+            if not model:FindFirstChildOfClass("Humanoid") then
+                warn("[Ripper] В модели НЕТ Humanoid, поэтому она не может идти!")
             end
         end
         
-        -- Звук разбития
+        -- Ломаем лампы и красим комнату
+        for _, obj in pairs(currentRoom:GetDescendants()) do
+            if obj:IsA("Light") then
+                obj.Enabled = false
+                if obj.Parent.Name == "LightFixture" then obj.Parent.Transparency = 0.8 end
+            end
+        end
+        
         local breakSound = Instance.new("Sound")
         breakSound.SoundId = "rbxassetid://6737582037" 
         breakSound.Volume = 5
@@ -81,7 +100,6 @@ Ripper:SetCallback("OnSpawned", function()
         breakSound:Play()
         game.Debris:AddItem(breakSound, 3)
 
-        -- Красим комнату
         local cc = Lighting:FindFirstChild("MainColorCorrection")
         if cc then
             TweenService:Create(cc, TweenInfo.new(2), {
@@ -101,12 +119,13 @@ Ripper:SetCallback("OnSpawned", function()
     end
 end)
 
+-- Ловим момент, когда движок пытается начать движение
 Ripper:SetCallback("OnStartMoving", function()
-    print("[Ripper] Начал движение!")
+    print("[Ripper] ДВИЖЕНИЕ НАЧАЛОСЬ! Если он стоит на месте - проблема в физике модели.")
 end)
 
 Ripper:SetCallback("OnDespawned", function()
-    print("[Ripper] Исчез.")
+    print("[Ripper] Модель удалена (Despawned).")
 end)
 
 Ripper:Run()
