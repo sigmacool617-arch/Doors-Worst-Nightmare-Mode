@@ -1,10 +1,9 @@
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
 
--- Загружаем движок (Спавнер)
+-- Загружаем движок
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 
--- Создаем настройки для Ripper
 local Ripper = spawner.Create({
     Entity = {
         Name = "Ripper", 
@@ -12,8 +11,8 @@ local Ripper = spawner.Create({
         HeightOffset = 0, 
     },
     Lights = {
-        Flicker = { Enabled = false, Duration = 0 }, -- Отключаем стандартное мигание, сделаем своё
-        Shatter = false, -- Отключаем стандартное разбитие, сделаем своё
+        Flicker = { Enabled = false, Duration = 0 },
+        Shatter = false,
         Repair = false,
     },
     Earthquake = { Enabled = false },
@@ -24,7 +23,7 @@ local Ripper = spawner.Create({
     },
     Movement = {
         Speed = 150,
-        Delay = 8, -- Увеличиваем задержку, чтобы он побежал ПОСЛЕ того, как комната станет красной
+        Delay = 8, 
         Reversed = false, 
     },
     Rebounding = {
@@ -46,61 +45,51 @@ local Ripper = spawner.Create({
         Break = true,
     },
     Death = {
-        Type = "Curious", -- ИСПРАВЛЕНО: было Curios
+        Type = "Curious",
         Hints = {
-            "You died to Ripper...", 
+            "You died to...", 
             "She said this entity named Ripper, okay.", 
             "Oh, she also said what you need to do.", 
-            "Hm, I won't say, just return and try again." -- ИСПРАВЛЕНО: закрыта кавычка
+            "Hm, I won't say, just return and try again."
         },
         Cause = "Ripper"
     }
 })
 
--- Добавляем свои эффекты при спавне
 Ripper:SetCallback("OnSpawned", function()
-    -- ИСПРАВЛЕНО: было myRush, теперь Ripper
-    print("Ripper is preparing...")
+    print("[Ripper] Модель появилась. Ждем 8 секунд до старта...")
     
-    -- 1. Находим текущую комнату
     local roomNum = game.ReplicatedStorage.GameData.LatestRoom.Value
     local currentRoom = workspace.CurrentRooms:FindFirstChild(tostring(roomNum))
     
     if currentRoom then
-        -- 2. Разбиваем все лампы (эффект искр и звук)
+        -- Ломаем лампы
         for _, obj in pairs(currentRoom:GetDescendants()) do
             if obj:IsA("Light") then
                 obj.Enabled = false
-                if obj.Parent.Name == "LightFixture" or obj.Parent:FindFirstChild("Glass") then
-                    -- Визуально ломаем (делаем невидимым или меняем цвет)
+                if obj.Parent.Name == "LightFixture" then
                     obj.Parent.Transparency = 0.8
                 end
             end
-            -- Если есть скрипт частиц для разбития, активируем
-            if obj:IsA("ParticleEmitter") and obj.Name:lower():find("spark") then
-                obj:Emit(20)
-            end
         end
         
-        -- Включаем звук разбития стекла
+        -- Звук разбития
         local breakSound = Instance.new("Sound")
-        breakSound.SoundId = "rbxassetid://6737582037" -- Звук разбития
+        breakSound.SoundId = "rbxassetid://6737582037" 
         breakSound.Volume = 5
         breakSound.Parent = currentRoom
         breakSound:Play()
         game.Debris:AddItem(breakSound, 3)
 
-        -- 3. Красим комнату в красный (через ColorCorrection в Lighting)
+        -- Красим комнату
         local cc = Lighting:FindFirstChild("MainColorCorrection")
         if cc then
-            -- Плавно делаем красным
             TweenService:Create(cc, TweenInfo.new(2), {
                 TintColor = Color3.fromRGB(255, 50, 50),
                 Contrast = 0.5,
                 Saturation = 0.5
             }):Play()
             
-            -- Через 6 секунд (пока он летит к тебе) возвращаем всё обратно
             task.delay(6, function()
                 TweenService:Create(cc, TweenInfo.new(3), {
                     TintColor = Color3.fromRGB(255, 255, 255),
@@ -112,5 +101,12 @@ Ripper:SetCallback("OnSpawned", function()
     end
 end)
 
--- Запускаем!
+Ripper:SetCallback("OnStartMoving", function()
+    print("[Ripper] Начал движение!")
+end)
+
+Ripper:SetCallback("OnDespawned", function()
+    print("[Ripper] Исчез.")
+end)
+
 Ripper:Run()
