@@ -1,91 +1,111 @@
-local RunService = game:GetService("RunService")
-local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local LP = Players.LocalPlayer
 
--- Настройки
-local DAMAGE_PER_SECOND = 10
-local RADIUS = 100 -- Радиус действия (в стадах)
-local DURATION = 20 -- Сколько секунд комната остается радиоактивной
+-- Загружаем движок
+local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 
-local currentRoom = nil
-local isActive = false
-local damageTimer = 0
+-- Создаем "пустышку" через движок, чтобы он показал красивый экран смерти
+local Radiation = spawner.Create({
+    Entity = {
+        Name = "Radiation", 
+        Asset = "rbxassetid://11851409651", -- Модель не важна, мы её спрячем
+        HeightOffset = 0, 
+    },
+    Lights = { Flicker = { Enabled = false }, Shatter = false, Repair = false },
+    Earthquake = { Enabled = false },
+    CameraShake = { Enabled = false },
+    Movement = { Speed = 0, Delay = 999 }, -- Он никогда не побежит
+    Rebounding = { Enabled = false },
+    Damage = { Enabled = false }, -- Отключаем урон движка, у нас свой
+    Crucifixion = { Enabled = false },
+    Death = {
+        Type = "Curious", 
+        Hints = {
+            "You died to Radiation...", 
+            "You stayed in the contaminated room for too long.", 
+            "Run to the next door immediately.", 
+            "Did you not see the green light?"
+        },
+        Cause = "Radiation"
+    }
+})
 
--- Находим комнату
-local roomNum = game.ReplicatedStorage.GameData.LatestRoom.Value
-currentRoom = workspace.CurrentRooms:FindFirstChild(tostring(roomNum))
+Radiation:SetCallback("OnSpawned", function()
+    print("[Radiation] Комната заражена!")
+    task.wait(0.1)
 
-if not currentRoom then return end
-
-print("[Radiation] Комната заражена!")
-
--- 1. Визуал (зеленоватый оттенок)
-local cc = Lighting:FindFirstChild("MainColorCorrection")
-if cc then
-    TweenService:Create(cc, TweenInfo.new(2), {
-        TintColor = Color3.fromRGB(100, 255, 100),
-        Contrast = 0.3
-    }):Play()
-end
-
--- 2. Звук счетчика Гейгера
-local geiger = Instance.new("Sound")
-geiger.SoundId = "rbxassetid://131238238" -- Звук счетчика
-geiger.Volume = 3
-geiger.Looped = true
-geiger.Parent = workspace
-geiger:Play()
-
--- 3. Главный цикл (наносим урон)
-isActive = true
-task.spawn(function()
-    local startTime = tick()
+    -- 1. СРАЗУ УБИРАЕМ МОДЕЛЬ (чтобы она не висела в комнате)
+    local roomNum = game.ReplicatedStorage.GameData.LatestRoom.Value
+    local currentRoom = workspace.CurrentRooms:FindFirstChild(tostring(roomNum))
     
-    while isActive do
-        task.wait(0.1) -- Проверяем каждые 0.1 секунды
-        
-        -- Если время вышло, отключаем
-        if tick() - startTime >= DURATION then
-            isActive = false
-            break
-        end
-        
-        local char = LP.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        
-        if hrp and hum and hum.Health > 0 then
-            -- Проверяем, находится ли игрок в этой комнате (или рядом с ней)
-            local dist = (hrp.Position - currentRoom.PrimaryPart.Position).Magnitude
+    if currentRoom then
+        local model = currentRoom:FindFirstChild("Radiation") or workspace:FindFirstChild("Radiation")
+        if model then model:Destroy() end
+    end
+
+    -- 2. ЭФФЕКТ ЗЕЛЕНОГО СВЕТА
+    local cc = Lighting:FindFirstChild("MainColorCorrection")
+    if cc then
+        TweenService:Create(cc, TweenInfo.new(2), {
+            TintColor = Color3.fromRGB(100, 255, 100),
+            Contrast = 0.3
+        }):Play()
+    end
+
+    -- 3. ЗВУК СЧЕТЧИКА ГЕЙГЕРА
+    local geiger = Instance.new("Sound")
+    geiger.SoundId = "rbxassetid://131238238" 
+    geiger.Volume = 2
+    geiger.Looped = true
+    geiger.Parent = workspace
+    geiger:Play()
+
+    -- 4. ЛОГИКА УРОНА
+    local damageTimer = 0
+    local isActive = true
+    local startTime = tick()
+
+    -- Цикл работает 20 секунд, потом комната очищается
+    task.spawn(function()
+        while isActive and (tick() - startTime < 20) do
+            task.wait(0.1)
             
-            if dist <= RADIUS then
+            local char = LP.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            
+            if hrp and hum and hum.Health > 0 then
                 damageTimer = damageTimer + 0.1
                 
-                -- Каждую 1 секунду наносим урон
+                -- Каждую секунду отнимаем 10 HP
                 if damageTimer >= 1 then
                     damageTimer = 0
-                    hum:TakeDamage(DAMAGE_PER_SECOND)
+                    hum:TakeDamage(10)
                     
-                    -- Эффект тошноты
+                    -- Эффект размытия (тошнота)
                     local nausea = Instance.new("BlurEffect")
-                    nausea.Size = 10
+                    nausea.Size = 8
                     nausea.Parent = Lighting
-                    TweenService:Create(nausea, TweenInfo.new(0.5), {Size = 0}):Play()
-                    game.Debris:AddItem(nausea, 1)
+                    TweenService:Create(nausea, TweenInfo.new(0.4), {Size = 0}):Play()
+                    game.Debris:AddItem(nausea, 0.5)
                 end
             end
         end
-    end
-    
-    -- Очистка после окончания
-    if geiger then geiger:Destroy() end
-    if cc then
-        TweenService:Create(cc, TweenInfo.new(2), {
-            TintColor = Color3.fromRGB(255, 255, 255),
-            Contrast = 0
-        }):Play()
-    end
-    print("[Radiation] Комната очищена.")
+        
+        -- Очистка
+        isActive = false
+        if geiger then geiger:Destroy() end
+        if cc then
+            TweenService:Create(cc, TweenInfo.new(2), {
+                TintColor = Color3.fromRGB(255, 255, 255),
+                Contrast = 0
+            }):Play()
+        end
+        print("[Radiation] Комната очищена.")
+    end)
 end)
+
+Radiation:Run()
