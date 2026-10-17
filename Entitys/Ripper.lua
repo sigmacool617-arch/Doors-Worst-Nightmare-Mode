@@ -1,0 +1,116 @@
+local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
+
+-- Загружаем движок (Спавнер)
+local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
+
+-- Создаем настройки для Ripper
+local Ripper = spawner.Create({
+    Entity = {
+        Name = "Ripper", 
+        Asset = "rbxassetid://13942047057", 
+        HeightOffset = 0, 
+    },
+    Lights = {
+        Flicker = { Enabled = false, Duration = 0 }, -- Отключаем стандартное мигание, сделаем своё
+        Shatter = false, -- Отключаем стандартное разбитие, сделаем своё
+        Repair = false,
+    },
+    Earthquake = { Enabled = false },
+    CameraShake = {
+        Enabled = true,
+        Range = 100,
+        Values = {5, 30, 0.1, 1.2},
+    },
+    Movement = {
+        Speed = 150,
+        Delay = 8, -- Увеличиваем задержку, чтобы он побежал ПОСЛЕ того, как комната станет красной
+        Reversed = false, 
+    },
+    Rebounding = {
+        Enabled = false,
+        Type = "Rush",
+        Min = 1,
+        Max = 1,
+        Delay = 1,
+    },
+    Damage = {
+        Enabled = true,
+        Range = 80,
+        Amount = 100, 
+    },
+    Crucifixion = {
+        Enabled = true,
+        Range = 90,
+        Resist = false,
+        Break = true,
+    },
+    Death = {
+        Type = "Curious", -- ИСПРАВЛЕНО: было Curios
+        Hints = {
+            "You died to Ripper...", 
+            "She said this entity named Ripper, okay.", 
+            "Oh, she also said what you need to do.", 
+            "Hm, I won't say, just return and try again." -- ИСПРАВЛЕНО: закрыта кавычка
+        },
+        Cause = "Ripper"
+    }
+})
+
+-- Добавляем свои эффекты при спавне
+Ripper:SetCallback("OnSpawned", function()
+    -- ИСПРАВЛЕНО: было myRush, теперь Ripper
+    print("Ripper is preparing...")
+    
+    -- 1. Находим текущую комнату
+    local roomNum = game.ReplicatedStorage.GameData.LatestRoom.Value
+    local currentRoom = workspace.CurrentRooms:FindFirstChild(tostring(roomNum))
+    
+    if currentRoom then
+        -- 2. Разбиваем все лампы (эффект искр и звук)
+        for _, obj in pairs(currentRoom:GetDescendants()) do
+            if obj:IsA("Light") then
+                obj.Enabled = false
+                if obj.Parent.Name == "LightFixture" or obj.Parent:FindFirstChild("Glass") then
+                    -- Визуально ломаем (делаем невидимым или меняем цвет)
+                    obj.Parent.Transparency = 0.8
+                end
+            end
+            -- Если есть скрипт частиц для разбития, активируем
+            if obj:IsA("ParticleEmitter") and obj.Name:lower():find("spark") then
+                obj:Emit(20)
+            end
+        end
+        
+        -- Включаем звук разбития стекла
+        local breakSound = Instance.new("Sound")
+        breakSound.SoundId = "rbxassetid://6737582037" -- Звук разбития
+        breakSound.Volume = 5
+        breakSound.Parent = currentRoom
+        breakSound:Play()
+        game.Debris:AddItem(breakSound, 3)
+
+        -- 3. Красим комнату в красный (через ColorCorrection в Lighting)
+        local cc = Lighting:FindFirstChild("MainColorCorrection")
+        if cc then
+            -- Плавно делаем красным
+            TweenService:Create(cc, TweenInfo.new(2), {
+                TintColor = Color3.fromRGB(255, 50, 50),
+                Contrast = 0.5,
+                Saturation = 0.5
+            }):Play()
+            
+            -- Через 6 секунд (пока он летит к тебе) возвращаем всё обратно
+            task.delay(6, function()
+                TweenService:Create(cc, TweenInfo.new(3), {
+                    TintColor = Color3.fromRGB(255, 255, 255),
+                    Contrast = 0,
+                    Saturation = 0
+                }):Play()
+            end)
+        end
+    end
+end)
+
+-- Запускаем!
+Ripper:Run()
