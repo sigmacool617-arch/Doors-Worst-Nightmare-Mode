@@ -3,14 +3,12 @@ local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local LP = Players.LocalPlayer
 
--- Загружаем движок
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 
--- Создаем сущность (модель скрыта, урон наносим вручную)
 local Mimic = spawner.Create({
     Entity = {
         Name = "Mimic", 
-        Asset = "rbxassetid://11851409651", -- Модель не важна, мы её удалим
+        Asset = "rbxassetid://11851409651", 
         HeightOffset = 0, 
     },
     Lights = { Flicker = { Enabled = false }, Shatter = false, Repair = false },
@@ -38,41 +36,48 @@ Mimic:SetCallback("OnSpawned", function()
 
     local roomNum = game.ReplicatedStorage.GameData.LatestRoom.Value
     local currentRoom = workspace.CurrentRooms:FindFirstChild(tostring(roomNum))
-    
     if not currentRoom then return end
 
-    -- 1. Удаляем модель движка из комнаты, она нам не нужна
+    -- Удаляем модель движка
     local dummyModel = currentRoom:FindFirstChild("Mimic") or workspace:FindFirstChild("Mimic")
     if dummyModel then dummyModel:Destroy() end
 
-    -- 2. Ищем шкаф (Wardrobe или Closet) во всей комнате
+    -- Ищем шкаф. В Doors часто это Model с именем "Wardrobe" или "Closet"
     local closet = currentRoom:FindFirstChild("Wardrobe", true) 
                 or currentRoom:FindFirstChild("Closet", true)
                 or currentRoom:FindFirstChild("Wardrobe", true)
 
     if not closet then
-        print("[Mimic] В комнате нет шкафа. Мимик отменяется.")
+        print("[Mimic] В комнате нет шкафа. Отмена.")
         return
     end
 
-    print("[Mimic] Шкаф заражен!")
-
-    -- 3. Делаем шкаф "неровным" (наклоняем)
     local closetPart = closet:FindFirstChildWhichIsA("BasePart")
-    if closetPart then
-        -- Наклоняем вперед и в бок
-        closetPart.CFrame = closetPart.CFrame * CFrame.Angles(math.rad(3), 0, math.rad(4))
-    end
+    
+    -- Убрали наклон шкафа, чтобы выглядел ровно
+    -- closetPart.CFrame = closetPart.CFrame * CFrame.Angles(math.rad(3), 0, math.rad(4)) -- Закомментировано
 
-    -- 4. Добавляем красный свет изнутри
+    -- Делаем МАЛЕНЬКОЕ и ТУСКЛОЕ свечение внутри
     local redLight = Instance.new("PointLight")
     redLight.Color = Color3.fromRGB(255, 0, 0)
-    redLight.Brightness = 3
-    redLight.Range = 6
-    redLight.Parent = closetPart or closet
+    
+    -- Уменьшаем яркость и радиус в 3 раза
+    redLight.Brightness = 1       -- Было 3 (теперь светит еле-еле)
+    redLight.Range = 2            -- Было 6 (светит только в радиусе 2 стадов)
+    redLight.Shadows = false      -- Отключаем тени, чтобы не было резких перепадов
+    
+    -- Опускаем свет чуть ниже, чтобы он бил в пол шкафа, а не в потолок
+    if closetPart then
+        redLight.Parent = closetPart
+        -- Смещаем свет вниз по оси Y
+        redLight.Offset = Vector3.new(0, -1, 0) 
+    else
+        redLight.Parent = closet
+    end
 
-    -- 5. Слежка за игроком (Проверка на посадку в шкаф)
+    -- Логика убийства
     local isDead = false
+    local hasTriggered = false 
     local startTime = tick()
 
     task.spawn(function()
@@ -88,15 +93,14 @@ Mimic:SetCallback("OnSpawned", function()
                 break
             end
 
-            -- Проверяем, сидит ли игрок внутри шкафа (расстояние меньше 4 стадов)
-            if closetPart and hrp then
+            -- Проверка на посадку в шкаф
+            if closetPart and hrp and not hasTriggered then
                 local dist = (hrp.Position - closetPart.Position).Magnitude
                 
-                if dist < 4.5 then
-                    print("[Mimic] Игрок залез в шкаф!")
-                    isDead = true
+                if dist < 2.5 then
+                    hasTriggered = true
+                    print("[Mimic] Игрок залез в шкаф! Активация...")
                     
-                    -- Красный экран
                     local cc = Lighting:FindFirstChild("MainColorCorrection")
                     if cc then
                         TweenService:Create(cc, TweenInfo.new(0.2), {
@@ -105,14 +109,12 @@ Mimic:SetCallback("OnSpawned", function()
                         }):Play()
                     end
                     
-                    -- Убиваем
-                    hum.Health = 0
+                    hum:TakeDamage(100) 
                 end
             end
         end
         
-        -- Убираем свет через 20 сек, если никто не умер
-        if redLight then redLight:Destroy() end
+        if redLight then redLight.Destroy(redLight) end
     end)
 end)
 
