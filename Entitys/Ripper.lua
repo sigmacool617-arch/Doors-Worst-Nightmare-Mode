@@ -27,7 +27,7 @@ Ripper:SetCallback("OnSpawned", function()
     local currentRoom = workspace.CurrentRooms:FindFirstChild(tostring(roomNum))
     
     if currentRoom then
-        local model = currentRoom:FindFirstChild("Ripper") or workspace:FindFirstChild("Ripper")
+        local model = currentRoom:FindFirstChild("Cease") or workspace:FindFirstChild("Cease")
         if model then
             -- 1. Ищем главную деталь (PrimaryPart)
             local firstPart = model:FindFirstChildWhichIsA("BasePart")
