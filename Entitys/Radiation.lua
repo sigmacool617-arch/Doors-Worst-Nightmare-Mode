@@ -7,19 +7,18 @@ local LP = Players.LocalPlayer
 -- Загружаем движок
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 
--- Создаем "пустышку" через движок, чтобы он показал красивый экран смерти
 local Radiation = spawner.Create({
     Entity = {
         Name = "Radiation", 
-        Asset = "rbxassetid://11851409651", -- Модель не важна, мы её спрячем
+        Asset = "rbxassetid://11851409651", 
         HeightOffset = 0, 
     },
     Lights = { Flicker = { Enabled = false }, Shatter = false, Repair = false },
     Earthquake = { Enabled = false },
     CameraShake = { Enabled = false },
-    Movement = { Speed = 0, Delay = 999 }, -- Он никогда не побежит
+    Movement = { Speed = 0, Delay = 999 }, 
     Rebounding = { Enabled = false },
-    Damage = { Enabled = false }, -- Отключаем урон движка, у нас свой
+    Damage = { Enabled = false }, 
     Crucifixion = { Enabled = false },
     Death = {
         Type = "Curious", 
@@ -37,16 +36,16 @@ Radiation:SetCallback("OnSpawned", function()
     print("[Radiation] Комната заражена!")
     task.wait(0.1)
 
-    -- 1. СРАЗУ УБИРАЕМ МОДЕЛЬ (чтобы она не висела в комнате)
     local roomNum = game.ReplicatedStorage.GameData.LatestRoom.Value
     local currentRoom = workspace.CurrentRooms:FindFirstChild(tostring(roomNum))
     
-    if currentRoom then
-        local model = currentRoom:FindFirstChild("Radiation") or workspace:FindFirstChild("Radiation")
-        if model then model:Destroy() end
-    end
+    if not currentRoom then return end
 
-    -- 2. ЭФФЕКТ ЗЕЛЕНОГО СВЕТА
+    -- Удаляем модель движка
+    local dummyModel = currentRoom:FindFirstChild("Radiation") or workspace:FindFirstChild("Radiation")
+    if dummyModel then dummyModel:Destroy() end
+
+    -- Включаем зеленый свет
     local cc = Lighting:FindFirstChild("MainColorCorrection")
     if cc then
         TweenService:Create(cc, TweenInfo.new(2), {
@@ -55,7 +54,7 @@ Radiation:SetCallback("OnSpawned", function()
         }):Play()
     end
 
-    -- 3. ЗВУК СЧЕТЧИКА ГЕЙГЕРА
+    -- Звук Гейгера
     local geiger = Instance.new("Sound")
     geiger.SoundId = "rbxassetid://131238238" 
     geiger.Volume = 2
@@ -63,12 +62,11 @@ Radiation:SetCallback("OnSpawned", function()
     geiger.Parent = workspace
     geiger:Play()
 
-    -- 4. ЛОГИКА УРОНА
     local damageTimer = 0
     local isActive = true
     local startTime = tick()
 
-    -- Цикл работает 20 секунд, потом комната очищается
+    -- ГЛАВНЫЙ ЦИКЛ (Исправленный)
     task.spawn(function()
         while isActive and (tick() - startTime < 20) do
             task.wait(0.1)
@@ -78,24 +76,46 @@ Radiation:SetCallback("OnSpawned", function()
             local hum = char and char:FindFirstChildOfClass("Humanoid")
             
             if hrp and hum and hum.Health > 0 then
-                damageTimer = damageTimer + 0.1
+                -- ПРОВЕРКА: Игрок должен быть В ТОЙ САМОЙ КОМНАТЕ
+                -- Проверяем, является ли комната предком игрока (или просто дистанцию до центра)
+                local isInside = false
                 
-                -- Каждую секунду отнимаем 10 HP
-                if damageTimer >= 1 then
-                    damageTimer = 0
-                    hum:TakeDamage(10)
+                -- Если у комнаты есть PrimaryPart, проверяем дистанцию (примерно 40 стадов)
+                if currentRoom.PrimaryPart then
+                    local dist = (hrp.Position - currentRoom.PrimaryPart.Position).Magnitude
+                    if dist <= 40 then isInside = true end
+                else
+                    -- Если PrimaryPart нет, проверяем по родителю (находится ли HRP внутри CurrentRooms[roomNum])
+                    local currentParent = hrp
+                    while currentParent do
+                        if currentParent == currentRoom then
+                            isInside = true
+                            break
+                        end
+                        currentParent = currentParent.Parent
+                    end
+                end
+                
+                -- Урон идет ТОЛЬКО если игрок внутри зараженной комнаты
+                if isInside then
+                    damageTimer = damageTimer + 0.1
                     
-                    -- Эффект размытия (тошнота)
-                    local nausea = Instance.new("BlurEffect")
-                    nausea.Size = 8
-                    nausea.Parent = Lighting
-                    TweenService:Create(nausea, TweenInfo.new(0.4), {Size = 0}):Play()
-                    game.Debris:AddItem(nausea, 0.5)
+                    if damageTimer >= 1 then
+                        damageTimer = 0
+                        hum:TakeDamage(10)
+                        
+                        -- Эффект размытия (тошнота)
+                        local nausea = Instance.new("BlurEffect")
+                        nausea.Size = 8
+                        nausea.Parent = Lighting
+                        TweenService:Create(nausea, TweenInfo.new(0.4), {Size = 0}):Play()
+                        game.Debris:AddItem(nausea, 0.5)
+                    end
                 end
             end
         end
         
-        -- Очистка
+        -- Очистка (если прошло 20 сек)
         isActive = false
         if geiger then geiger:Destroy() end
         if cc then
