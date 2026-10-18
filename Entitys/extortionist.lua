@@ -11,7 +11,7 @@ local Extortionist = spawner.Create({
     Entity = {
         Name = "Extortionist", 
         -- СЮДА ВСТАВЬ СВОЮ ССЫЛКУ НА МОДЕЛЬ С ГИТХАБА (через Raw)
-        Asset = "https://github.com/ТВОЙ_НИК/ТВОЙ_РЕПО/raw/main/Extortionist.rbxm", 
+        Asset = "https://raw.githubusercontent.com/sigmacool617-arch/Doors-Worst-Nightmare-Mode/main/models/Extortionist.rbxm", 
         HeightOffset = 0, 
     },
     Lights = { Flicker = { Enabled = false }, Shatter = false, Repair = false },
