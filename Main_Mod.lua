@@ -11,6 +11,7 @@ local entityList = {
     { name = "Rebound", url = "https://raw.githubusercontent.com/sigmacool617-arch/Doors-Worst-Nightmare-Mode/refs/heads/main/Entitys/Rebound.lua", weight = 3 },
     { name = "Radiation", url = "https://raw.githubusercontent.com/sigmacool617-arch/Doors-Worst-Nightmare-Mode/refs/heads/main/Entitys/Radiation.lua", weight = 10 },
     { name = "Mimic", url = "https://raw.githubusercontent.com/sigmacool617-arch/Doors-Worst-Nightmare-Mode/refs/heads/main/Entitys/Mimic.lua", weight = 25 },
+    { name = "Extortionist", url = "ССЫЛКА_НА_ТВОЙ_EXTORTIONIST_НА_GITHUB", weight = 8 },
 }
 
 local isRunning = true
