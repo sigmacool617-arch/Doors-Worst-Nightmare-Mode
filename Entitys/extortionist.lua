@@ -53,18 +53,18 @@ Extortionist:SetCallback("OnSpawned", function()
     -- 1. ЗВУКИ (Ты можешь заменить ID на свои)
     -- ==========================================
     local defaultSound = Instance.new("Sound")
-    defaultSound.SoundId = "rbxassetid://131238238" -- Звук появления
+    defaultSound.SoundId = "rbxassetid://84864462000645" -- Звук появления
     defaultSound.Volume = 3
     defaultSound.Parent = primaryPart
     defaultSound:Play()
 
     local stealSound = Instance.new("Sound")
-    stealSound.SoundId = "rbxassetid://4835664238" -- Звук кражи (шепот)
+    stealSound.SoundId = "rbxassetid://139258064958096" -- Звук кражи (шепот)
     stealSound.Volume = 4
     stealSound.Parent = primaryPart
 
     local hitSound = Instance.new("Sound")
-    hitSound.SoundId = "rbxassetid://6737582037" -- Звук удара (стекло)
+    hitSound.SoundId = "rbxassetid://91272160888434" -- Звук удара (стекло)
     hitSound.Volume = 5
     hitSound.Parent = primaryPart
 
