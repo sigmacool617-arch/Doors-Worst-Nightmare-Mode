@@ -3,6 +3,7 @@ local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local LP = Players.LocalPlayer
 
+-- Загружаем движок
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 
 local Mimic = spawner.Create({
@@ -42,10 +43,9 @@ Mimic:SetCallback("OnSpawned", function()
     local dummyModel = currentRoom:FindFirstChild("Mimic") or workspace:FindFirstChild("Mimic")
     if dummyModel then dummyModel:Destroy() end
 
-    -- Ищем шкаф. В Doors часто это Model с именем "Wardrobe" или "Closet"
+    -- Ищем шкаф
     local closet = currentRoom:FindFirstChild("Wardrobe", true) 
                 or currentRoom:FindFirstChild("Closet", true)
-                or currentRoom:FindFirstChild("Wardrobe", true)
 
     if not closet then
         print("[Mimic] В комнате нет шкафа. Отмена.")
@@ -53,24 +53,23 @@ Mimic:SetCallback("OnSpawned", function()
     end
 
     local closetPart = closet:FindFirstChildWhichIsA("BasePart")
-    
-    -- Убрали наклон шкафа, чтобы выглядел ровно
-    -- closetPart.CFrame = closetPart.CFrame * CFrame.Angles(math.rad(3), 0, math.rad(4)) -- Закомментировано
 
     -- Делаем МАЛЕНЬКОЕ и ТУСКЛОЕ свечение внутри
     local redLight = Instance.new("PointLight")
     redLight.Color = Color3.fromRGB(255, 0, 0)
-    
-    -- Уменьшаем яркость и радиус в 3 раза
-    redLight.Brightness = 1       -- Было 3 (теперь светит еле-еле)
-    redLight.Range = 2            -- Было 6 (светит только в радиусе 2 стадов)
-    redLight.Shadows = false      -- Отключаем тени, чтобы не было резких перепадов
-    
-    -- Опускаем свет чуть ниже, чтобы он бил в пол шкафа, а не в потолок
+    redLight.Brightness = 1
+    redLight.Range = 2
+    redLight.Shadows = false
+
     if closetPart then
-        redLight.Parent = closetPart
-        -- Смещаем свет вниз по оси Y
-        redLight.Offset = Vector3.new(0, -1, 0) 
+        -- Создаем точку крепления (Attachment) внутри детали
+        local attachment = Instance.new("Attachment")
+        -- Смещаем точку вниз по оси Y
+        attachment.Position = Vector3.new(0, -1, 0) 
+        attachment.Parent = closetPart
+        
+        -- Прикрепляем свет к этой точке
+        redLight.Parent = attachment
     else
         redLight.Parent = closet
     end
@@ -114,7 +113,7 @@ Mimic:SetCallback("OnSpawned", function()
             end
         end
         
-        if redLight then redLight.Destroy(redLight) end
+        if redLight then redLight:Destroy() end
     end)
 end)
 
