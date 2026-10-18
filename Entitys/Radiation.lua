@@ -4,7 +4,6 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LP = Players.LocalPlayer
 
--- Загружаем движок
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 
 local Radiation = spawner.Create({
@@ -38,14 +37,11 @@ Radiation:SetCallback("OnSpawned", function()
 
     local roomNum = game.ReplicatedStorage.GameData.LatestRoom.Value
     local currentRoom = workspace.CurrentRooms:FindFirstChild(tostring(roomNum))
-    
     if not currentRoom then return end
 
-    -- Удаляем модель движка
     local dummyModel = currentRoom:FindFirstChild("Radiation") or workspace:FindFirstChild("Radiation")
     if dummyModel then dummyModel:Destroy() end
 
-    -- Включаем зеленый свет
     local cc = Lighting:FindFirstChild("MainColorCorrection")
     if cc then
         TweenService:Create(cc, TweenInfo.new(2), {
@@ -54,7 +50,6 @@ Radiation:SetCallback("OnSpawned", function()
         }):Play()
     end
 
-    -- Звук Гейгера
     local geiger = Instance.new("Sound")
     geiger.SoundId = "rbxassetid://131238238" 
     geiger.Volume = 2
@@ -66,7 +61,6 @@ Radiation:SetCallback("OnSpawned", function()
     local isActive = true
     local startTime = tick()
 
-    -- ГЛАВНЫЙ ЦИКЛ (Исправленный)
     task.spawn(function()
         while isActive and (tick() - startTime < 20) do
             task.wait(0.1)
@@ -76,16 +70,12 @@ Radiation:SetCallback("OnSpawned", function()
             local hum = char and char:FindFirstChildOfClass("Humanoid")
             
             if hrp and hum and hum.Health > 0 then
-                -- ПРОВЕРКА: Игрок должен быть В ТОЙ САМОЙ КОМНАТЕ
-                -- Проверяем, является ли комната предком игрока (или просто дистанцию до центра)
                 local isInside = false
                 
-                -- Если у комнаты есть PrimaryPart, проверяем дистанцию (примерно 40 стадов)
                 if currentRoom.PrimaryPart then
                     local dist = (hrp.Position - currentRoom.PrimaryPart.Position).Magnitude
                     if dist <= 40 then isInside = true end
                 else
-                    -- Если PrimaryPart нет, проверяем по родителю (находится ли HRP внутри CurrentRooms[roomNum])
                     local currentParent = hrp
                     while currentParent do
                         if currentParent == currentRoom then
@@ -96,15 +86,21 @@ Radiation:SetCallback("OnSpawned", function()
                     end
                 end
                 
-                -- Урон идет ТОЛЬКО если игрок внутри зараженной комнаты
                 if isInside then
                     damageTimer = damageTimer + 0.1
                     
                     if damageTimer >= 1 then
                         damageTimer = 0
-                        hum:TakeDamage(10)
                         
-                        -- Эффект размытия (тошнота)
+                        -- ИСПРАВЛЕНИЕ УРОНА: напрямую меняем здоровье
+                        hum.Health = hum.Health - 10
+                        
+                        -- Если игрок умер от этого урона, вызываем смерть через движок
+                        if hum.Health <= 0 then
+                            -- Движок RegularVynixu сам покажет экран смерти, если мы его вызовем
+                            pcall(function() Radiation:Death() end) 
+                        end
+                        
                         local nausea = Instance.new("BlurEffect")
                         nausea.Size = 8
                         nausea.Parent = Lighting
@@ -115,7 +111,6 @@ Radiation:SetCallback("OnSpawned", function()
             end
         end
         
-        -- Очистка (если прошло 20 сек)
         isActive = false
         if geiger then geiger:Destroy() end
         if cc then
@@ -124,7 +119,6 @@ Radiation:SetCallback("OnSpawned", function()
                 Contrast = 0
             }):Play()
         end
-        print("[Radiation] Комната очищена.")
     end)
 end)
 
