@@ -95,12 +95,12 @@ end)
 replicatedStorage.GameData.LatestRoom.Changed:Connect(function(newRoom)
     task.wait(1.5) -- Ждем, пока игрок зайдет
     
-    local spawnChance = 10 -- Базовый шанс 10%
+    local spawnChance = 20 -- Базовый шанс 10%
     
     if newRoom >= 90 then
-        spawnChance = 50 -- После 90 комнаты шанс 50%
+        spawnChance = 70 -- После 90 комнаты шанс 50%
     elseif newRoom > 50 then
-        spawnChance = 25 -- С 50 по 89 комнату - 25%
+        spawnChance = 40 -- С 50 по 89 комнату - 25%
     end
     
     if math.random(1, 100) <= spawnChance then
