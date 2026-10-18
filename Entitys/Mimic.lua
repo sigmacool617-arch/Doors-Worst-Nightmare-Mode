@@ -3,15 +3,10 @@ local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local LP = Players.LocalPlayer
 
--- Загружаем движок
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 
 local Mimic = spawner.Create({
-    Entity = {
-        Name = "Mimic", 
-        Asset = "rbxassetid://11851409651", 
-        HeightOffset = 0, 
-    },
+    Entity = { Name = "Mimic", Asset = "rbxassetid://11851409651", HeightOffset = 0 },
     Lights = { Flicker = { Enabled = false }, Shatter = false, Repair = false },
     Earthquake = { Enabled = false },
     CameraShake = { Enabled = false },
@@ -32,49 +27,32 @@ local Mimic = spawner.Create({
 })
 
 Mimic:SetCallback("OnSpawned", function()
-    print("[Mimic] Спавн начался. Ищем шкаф...")
     task.wait(0.2)
-
     local roomNum = game.ReplicatedStorage.GameData.LatestRoom.Value
     local currentRoom = workspace.CurrentRooms:FindFirstChild(tostring(roomNum))
     if not currentRoom then return end
 
-    -- Удаляем модель движка
     local dummyModel = currentRoom:FindFirstChild("Mimic") or workspace:FindFirstChild("Mimic")
     if dummyModel then dummyModel:Destroy() end
 
-    -- Ищем шкаф
-    local closet = currentRoom:FindFirstChild("Wardrobe", true) 
-                or currentRoom:FindFirstChild("Closet", true)
-
-    if not closet then
-        print("[Mimic] В комнате нет шкафа. Отмена.")
-        return
-    end
+    local closet = currentRoom:FindFirstChild("Wardrobe", true) or currentRoom:FindFirstChild("Closet", true)
+    if not closet then return end
 
     local closetPart = closet:FindFirstChildWhichIsA("BasePart")
+    if not closetPart then return end
 
-    -- Делаем МАЛЕНЬКОЕ и ТУСКЛОЕ свечение внутри
+    -- Красный свет
     local redLight = Instance.new("PointLight")
     redLight.Color = Color3.fromRGB(255, 0, 0)
     redLight.Brightness = 1
     redLight.Range = 2
     redLight.Shadows = false
+    
+    local attachment = Instance.new("Attachment")
+    attachment.Position = Vector3.new(0, -1, 0) 
+    attachment.Parent = closetPart
+    redLight.Parent = attachment
 
-    if closetPart then
-        -- Создаем точку крепления (Attachment) внутри детали
-        local attachment = Instance.new("Attachment")
-        -- Смещаем точку вниз по оси Y
-        attachment.Position = Vector3.new(0, -1, 0) 
-        attachment.Parent = closetPart
-        
-        -- Прикрепляем свет к этой точке
-        redLight.Parent = attachment
-    else
-        redLight.Parent = closet
-    end
-
-    -- Логика убийства
     local isDead = false
     local hasTriggered = false 
     local startTime = tick()
@@ -82,37 +60,26 @@ Mimic:SetCallback("OnSpawned", function()
     task.spawn(function()
         while not isDead and (tick() - startTime < 20) do
             task.wait(0.1)
-            
             local char = LP.Character
             local hum = char and char:FindFirstChildOfClass("Humanoid")
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            
-            if not hum or hum.Health <= 0 then
-                isDead = true
-                break
-            end
+            if not hum or hum.Health <= 0 then isDead = true; break end
 
-            -- Проверка на посадку в шкаф
-            if closetPart and hrp and not hasTriggered then
+            if hrp and not hasTriggered then
                 local dist = (hrp.Position - closetPart.Position).Magnitude
-                
                 if dist < 2.5 then
                     hasTriggered = true
-                    print("[Mimic] Игрок залез в шкаф! Активация...")
+                    
+                    -- Вызываем смерть через движок (чтобы был текст)
+                    pcall(function() Mimic:Death() end)
                     
                     local cc = Lighting:FindFirstChild("MainColorCorrection")
                     if cc then
-                        TweenService:Create(cc, TweenInfo.new(0.2), {
-                            TintColor = Color3.fromRGB(255, 0, 0),
-                            Contrast = 1
-                        }):Play()
+                        TweenService:Create(cc, TweenInfo.new(0.2), {TintColor = Color3.fromRGB(255, 0, 0), Contrast = 1}):Play()
                     end
-                    
-                    hum:TakeDamage(100) 
                 end
             end
         end
-        
         if redLight then redLight:Destroy() end
     end)
 end)
