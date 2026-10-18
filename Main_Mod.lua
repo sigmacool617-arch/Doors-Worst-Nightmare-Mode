@@ -7,11 +7,11 @@ local lp = players.LocalPlayer
     weight = шанс выпадения (Больше = чаще).
 ]]
 local entityList = {
-    { name = "Ripper", url = "https://raw.githubusercontent.com/sigmacool617-arch/Doors-Worst-Nightmare-Mode/refs/heads/main/Entitys/Ripper.lua", weight = 20 },
-    { name = "Rebound", url = "https://raw.githubusercontent.com/sigmacool617-arch/Doors-Worst-Nightmare-Mode/refs/heads/main/Entitys/Rebound.lua", weight = 3 },
-    { name = "Radiation", url = "https://raw.githubusercontent.com/sigmacool617-arch/Doors-Worst-Nightmare-Mode/refs/heads/main/Entitys/Radiation.lua", weight = 10 },
-    { name = "Mimic", url = "https://raw.githubusercontent.com/sigmacool617-arch/Doors-Worst-Nightmare-Mode/refs/heads/main/Entitys/Mimic.lua", weight = 25 },
-    { name = "Extortionist", url = "https://raw.githubusercontent.com/sigmacool617-arch/Doors-Worst-Nightmare-Mode/refs/heads/main/Entitys/extortionist.lua", weight = 8 },
+    { name = "Ripper", url = "https://raw.githubusercontent.com/sigmacool617-arch/Doors-Worst-Nightmare-Mode/refs/heads/main/Entitys/Ripper.lua", weight = 25 },
+    { name = "Rebound", url = "https://raw.githubusercontent.com/sigmacool617-arch/Doors-Worst-Nightmare-Mode/refs/heads/main/Entitys/Rebound.lua", weight = 5 },
+    { name = "Radiation", url = "https://raw.githubusercontent.com/sigmacool617-arch/Doors-Worst-Nightmare-Mode/refs/heads/main/Entitys/Radiation.lua", weight = 20 },
+    { name = "Mimic", url = "https://raw.githubusercontent.com/sigmacool617-arch/Doors-Worst-Nightmare-Mode/refs/heads/main/Entitys/Mimic.lua", weight = 20 },
+    { name = "Extortionist", url = "https://raw.githubusercontent.com/sigmacool617-arch/Doors-Worst-Nightmare-Mode/refs/heads/main/Entitys/extortionist.lua", weight = 15 },
 }
 
 local isRunning = true
